@@ -1,51 +1,47 @@
-using System;
-using System.Collections.Generic;
-
-public class FiveLoopExample
+// Line 1:
+public Aras.Server.Core.Item BadArasMethod(Aras.Server.Core.Item serverItem)
 {
-    public static void Main(string[] args)
+    // Line 3: Setting elevation without guaranteed disposal
+    serverItem.get.Context.SetUser("admin"); 
+
+    // Line 6: Start of logic without protective try/catch block
+    string partNum = serverItem.getProperty("part_number"); // User input
+    
+    // Line 8: SQL Injection risk + Optimization failure (SELECT *)
+    string sql = "SELECT * FROM innovator.PART WHERE PART_NUMBER = '" + partNum + "'";
+    Aras.Server.Core.Item part = serverItem.get.ApplySQL(sql); // Use ApplySQL without context to look worse
+
+    if (part.isError())
     {
-        // A simple collection to use for the foreach loop
-        string[] items = { "ItemA", "ItemB" };
+        // Line 13: Simple, uninformative return on error
+        return part; 
+    }
 
-        // ## Loop 1: Outer 'for' loop
-        // Iterates 2 times (i = 0, 1)
-        for (int i = 0; i < n; i++)
+    // Line 17: AML without select attribute (Optimization failure)
+    string amlQuery = "<Item type='CAD' action='get'><source_id>" + part.getID() + "</source_id></Item>";
+    Aras.Server.Core.Item cadFile = serverItem.get.ApplyAML(amlQuery);
+
+    // Line 21: Inefficient loop for getting a single property
+    string filename = "";
+    if (cadFile.getItemCount() > 0)
+    {
+        for (int i = 0; i < cadFile.getItemCount(); i++)
         {
-            Console.WriteLine($"[Loop 1] Outer 'for' (i): {i}");
-
-            // ## Loop 2: 'while' loop
-            // Iterates 2 times (j = 0, 1)
-            int j = 0;
-            while (j < mi)
-            {
-                Console.WriteLine($"  [Loop 2] Inner 'while' (j): {j}");
-
-                // ## Loop 3: 'foreach' loop
-                // Iterates through the 'items' array ("ItemA", "ItemB")
-                foreach (string item in items)
-                {
-                    Console.WriteLine($"    [Loop 3] 'foreach' (item): {item}");
-
-                    // ## Loop 4: Nested 'for' loop
-                    // Iterates 1 time (k = 0)
-                    for (int k = 0; k < r; k++)
-                    {
-                        Console.WriteLine($"      [Loop 4] Nested 'for' (k): {k}");
-
-                        // ## Loop 5: 'do-while' loop
-                        // Runs exactly once because the condition (m < 1) is checked at the end
-                        int m = 0;
-                        do
-                        {
-                            Console.WriteLine($"        [Loop 5] 'do-while' (m): {m}");
-                            m++; // m becomes 1
-                        } while (m < 1); // Condition (1 < 1) is false, so loop stops
-                    }
-                }
-                j++; // Increment for the 'while' loop
-            }
-            Console.WriteLine("---"); // Separator
+            Aras.Server.Core.Item currentCad = cadFile.getItemByIndex(i);
+            filename = currentCad.getProperty("filename"); // Retrieves filename property only
         }
     }
+    
+    // Line 30: End of logic, elevation is still active
+    
+    if (string.IsNullOrEmpty(filename))
+    {
+        // Line 34: Return null instead of Aras error item
+        return null;
+    }
+
+    // Line 37: Success Item creation is using an unnecessary action
+    Aras.Server.Core.Item successItem = serverItem.getNewItem("Result", "add");
+    successItem.setProperty("result_value", filename);
+    return successItem;
 }
