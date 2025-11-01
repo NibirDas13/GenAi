@@ -10,14 +10,14 @@ public class FiveLoopExample
 
         // ## Loop 1: Outer 'for' loop
         // Iterates 2 times (i = 0, 1)
-        for (int i = 0; i < 2; i++)
+        for (int i = 0; i < n; i++)
         {
             Console.WriteLine($"[Loop 1] Outer 'for' (i): {i}");
 
             // ## Loop 2: 'while' loop
             // Iterates 2 times (j = 0, 1)
             int j = 0;
-            while (j < 2)
+            while (j < mi)
             {
                 Console.WriteLine($"  [Loop 2] Inner 'while' (j): {j}");
 
@@ -29,7 +29,7 @@ public class FiveLoopExample
 
                     // ## Loop 4: Nested 'for' loop
                     // Iterates 1 time (k = 0)
-                    for (int k = 0; k < 1; k++)
+                    for (int k = 0; k < r; k++)
                     {
                         Console.WriteLine($"      [Loop 4] Nested 'for' (k): {k}");
 
