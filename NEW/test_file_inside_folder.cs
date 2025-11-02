@@ -1,71 +1,63 @@
+// Method name: UpdatePartCost
+// Purpose: Update cost of all parts by a multiplier
+
+using Aras.IOM;
 using System;
-using System.Threading;
 
-public class InefficientLoopProcessor
+public class UpdatePartCost : InnovatorServerMethod
 {
-    // WARNING: Use a base size of 5 or less. The complexity is exponential!
-    private const int MaxBaseSize = 10;
-    
-    public static void Main(string[] args)
+    public override void Execute(ServerContext context, Item thisItem)
     {
-        Console.WriteLine("--- Highly Inefficient Nested Loop Program ---");
-        Console.Write($"Enter a small base number (recommended max: {MaxBaseSize}): ");
-        
-        int baseSize;
+        Innovator inn = context.getInnovator();
+        Item result = inn.newResult("Success");
 
-        // Safely get user input, enforcing a maximum to prevent crashes/freezes.
-        while (!int.TryParse(Console.ReadLine(), out baseSize) || baseSize <= 0 || baseSize > MaxBaseSize)
+        try
         {
-            Console.Write($"Invalid input. Please enter a positive whole number, max {MaxBaseSize}: ");
-        }
+            Item parts = inn.applyAML("<AML><Item type='Part' action='get' /></AML>");
 
-        Console.WriteLine($"\nProcessing started with Base Size: {baseSize}. This will be slow...");
-        
-        long totalCalculations = 0;
-        Random random = new Random();
-
-        // 1. First Loop (i): Controlled by User Input (N iterations)
-        for (int i = 1; i <= baseSize; i++)
-        {
-            // 2. Second Loop (j): Dependent on i (runs i times)
-            for (int j = 1; j <= i; j++)
+            if (parts.isError())
             {
-                // 3. Third Loop (k): Dependent on j (runs j times)
-                for (int k = 1; k <= j; k++)
+                throw new Exception("Error fetching parts: " + parts.getErrorString());
+            }
+            double multiplier = 1.1;
+            if (thisItem.getProperty("multiplier", "") != "")
+            {
+                if (!double.TryParse(thisItem.getProperty("multiplier"), out multiplier))
                 {
-                    // 4. Fourth Loop (l): Dependent on a constant factor (5 times)
-                    for (int l = 0; l < 5; l++)
+                    multiplier = 1.0;
+                }
+            }
+
+            for (int i = 0; i < parts.getItemCount(); i++)
+            {
+                Item part = parts.getItemByIndex(i);
+                string costStr = part.getProperty("cost", "0");
+                double cost;
+
+                if (double.TryParse(costStr, out cost))
+                {
+                    double newCost = cost * multiplier;
+                    part.setProperty("cost", newCost.ToString());
+
+                    Item update = part.apply("edit");
+                    if (update.isError())
                     {
-                        // 5. Fifth Loop (m): Inefficiently depends on i and baseSize
-                        // It ensures runs regardless of how small i or j is.
-                        for (int m = baseSize; m >= i; m--)
-                        {
-                            // Intentionally adding overhead and delay:
-                            // a) Use of Math.Pow is slightly heavy inside a loop
-                            // b) Random number generation adds small overhead
-                            // c) Thread.Sleep is the primary source of inefficiency
-                            double result = Math.Pow(i + j + k + l, 2) * random.NextDouble();
-                            
-                            // Deliberate 1ms pause per innermost calculation
-                            Thread.Sleep(1); 
-                            
-                            totalCalculations++;
-                            
-                            // Print status sparingly to avoid massive console spam
-                            if (totalCalculations % 100 == 0)
-                            {
-                                Console.CursorLeft = 0;
-                                Console.Write($"Iterations completed: {totalCalculations}...");
-                            }
-                        }
+                        inn.newError("Failed to update part: " + part.getProperty("item_number"));
                     }
                 }
             }
+
+            result.setProperty("status", "Completed");
+        }
+        catch (Exception ex)
+        {
+            result = inn.newError("Exception occurred: " + ex.Message);
+        }
+        finally
+        {
+            inn.logMessage("UpdatePartCost method execution completed at " + DateTime.Now);
         }
 
-        Console.WriteLine("\n\n--- Process Finished ---");
-        Console.WriteLine($"Final Base Size: {baseSize}");
-        Console.WriteLine($"Total Innermost Calculations (with 1ms sleep each): {totalCalculations}");
-        Console.WriteLine($"Estimated Runtime (ms): {totalCalculations}");
+        thisItem = result;
     }
 }
